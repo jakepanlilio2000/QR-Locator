@@ -49,6 +49,7 @@ namespace LocatorApp.Services
 
                         int maxCols = 2;
                         int maxRows = 3;
+
                         double pageMarginTop = XUnit.FromMillimeter(12);
                         double pageMarginLeft = XUnit.FromMillimeter(12);
                         double cellW = XUnit.FromMillimeter(95);
@@ -63,7 +64,6 @@ namespace LocatorApp.Services
                         XGraphics gfx = XGraphics.FromPdfPage(page);
 
                         XFont titleFont = new XFont("Arial", 9, XFontStyle.Regular);
-                        XFont numberFont = new XFont("Arial", 55, XFontStyle.Bold);
                         XFont labelFont = new XFont("Arial", 9, XFontStyle.Bold);
                         XFont tableFont = new XFont("Arial", 8, XFontStyle.Regular);
                         XFont footerFont = new XFont("Arial", 8, XFontStyle.Italic);
@@ -79,16 +79,31 @@ namespace LocatorApp.Services
 
                             double tx = pageMarginLeft + (col * cellW);
                             double ty = pageMarginTop + (row * cellH);
+
                             gfx.DrawRectangle(outerPen, tx + boxMargin, ty + boxMargin, cellW - (boxMargin * 2), cellH - (boxMargin * 2));
+
                             gfx.DrawString("SCANNER LOCATOR TAG", titleFont, XBrushes.Black,
                                 new XRect(tx, ty + XUnit.FromMillimeter(6), cellW, 0),
                                 XStringFormats.TopCenter);
-                            gfx.DrawString(loc.SlotNo, numberFont, XBrushes.Black,
-                                new XRect(tx + XUnit.FromMillimeter(5), ty + XUnit.FromMillimeter(18), XUnit.FromMillimeter(40), XUnit.FromMillimeter(20)),
+
+                            double maxTextWidth = XUnit.FromMillimeter(38).Point;
+                            double currentFontSize = 55;
+                            XFont dynamicNumberFont = new XFont("Arial", currentFontSize, XFontStyle.Bold);
+
+                            while (gfx.MeasureString(loc.SlotNo, dynamicNumberFont).Width > maxTextWidth && currentFontSize > 12)
+                            {
+                                currentFontSize -= 1; 
+                                dynamicNumberFont = new XFont("Arial", currentFontSize, XFontStyle.Bold);
+                            }
+
+                            gfx.DrawString(loc.SlotNo, dynamicNumberFont, XBrushes.Black,
+                                new XRect(tx + XUnit.FromMillimeter(5), ty + XUnit.FromMillimeter(18), XUnit.FromMillimeter(38), XUnit.FromMillimeter(20)),
                                 XStringFormats.TopLeft);
+
                             gfx.DrawString("SCANNER SLOT NO:", labelFont, XBrushes.Black,
                                 new XRect(tx + XUnit.FromMillimeter(5), ty + XUnit.FromMillimeter(48), XUnit.FromMillimeter(40), XUnit.FromMillimeter(5)),
                                 XStringFormats.TopLeft);
+
                             string qrPayload = GenerateJsonPayload(loc);
                             using (Bitmap qrBitmap = GenerateQrCode(qrPayload))
                             {
@@ -103,6 +118,7 @@ namespace LocatorApp.Services
                                 }
                             }
 
+                            // Table Layout
                             double tableY = ty + XUnit.FromMillimeter(68);
                             double tX = tx + XUnit.FromMillimeter(5);
                             double rowH = XUnit.FromMillimeter(7.5);
@@ -122,6 +138,7 @@ namespace LocatorApp.Services
                                 row++;
                                 if (row >= maxRows)
                                 {
+
                                     if (i < total - 1)
                                     {
                                         page = document.AddPage();
@@ -144,7 +161,7 @@ namespace LocatorApp.Services
                 catch (Exception ex)
                 {
                     _logger.LogError("PDF Generation failed.", ex);
-                    throw; 
+                    throw;
                 }
             }, cancellationToken);
         }
@@ -155,7 +172,6 @@ namespace LocatorApp.Services
             {
                 try
                 {
-                   
                     using (FileStream fs = File.Open(path, FileMode.Open, FileAccess.Write, FileShare.None))
                     {
                     }
